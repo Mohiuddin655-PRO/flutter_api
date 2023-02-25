@@ -36,8 +36,8 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
       "${_source(source)}/$id";
 
   @override
-  Future<Response> insert<R>(
-    Map<String, dynamic> data, {
+  Future<Response> insert<R>({
+    required Map<String, dynamic> data,
     String? id,
     R? Function(R parent)? source,
   }) async {

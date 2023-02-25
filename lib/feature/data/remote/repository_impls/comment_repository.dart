@@ -17,8 +17,8 @@ class CommentRepository extends DatabaseRepository<Comment> {
     R? Function(R parent)? source,
   ]) {
     return remote.insert(
-      entity.source,
       // id: entity.id.key, auto generate key
+      data: entity.source,
       source: source,
     );
   }
