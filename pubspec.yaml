@@ -45,6 +45,7 @@ dependencies:
   equatable: ^2.0.5
   get_it: ^7.2.0
   flutter_keyboard_visibility: ^5.4.0
+  encrypt: ^5.0.1
 
 dev_dependencies:
   flutter_test:

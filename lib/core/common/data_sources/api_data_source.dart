@@ -20,7 +20,7 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
 
   dio.Dio get database => _db ??= dio.Dio();
 
-  String _source<R>(
+  String currentSource<R>(
     R? Function(R parent)? source,
   ) {
     final reference = "$api/$path";
@@ -32,8 +32,8 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
     }
   }
 
-  String _url<R>(String id, R? Function(R parent)? source) =>
-      "${_source(source)}/$id";
+  String currentUrl<R>(String id, R? Function(R parent)? source) =>
+      "${currentSource(source)}/$id";
 
   @override
   Future<Response> insert<R>({
@@ -44,7 +44,7 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
     const response = Response();
     if (data.isNotEmpty) {
       final url =
-          id != null && id.isNotEmpty ? _url(id, source) : _source(source);
+          id != null && id.isNotEmpty ? currentUrl(id, source) : currentSource(source);
       final reference = await database.post(url, data: data);
       if (reference.statusCode == 200 || reference.statusCode == 201) {
         final result = reference.data;
@@ -71,7 +71,7 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
     const response = Response();
     try {
       if (data.isNotEmpty) {
-        final url = _url(id, source);
+        final url = currentUrl(id, source);
         final reference = await database.put(url, data: data);
         if (reference.statusCode == 200 || reference.statusCode == 201) {
           final result = reference.data;
@@ -96,12 +96,13 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
   @override
   Future<Response> delete<R>(
     String id, {
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   }) async {
     const response = Response();
     try {
       if (id.isNotEmpty) {
-        final url = _url(id, source);
+        final url = currentUrl(id, source);
         final reference = await database.delete(url);
         if (reference.statusCode == 200 || reference.statusCode == 201) {
           final result = reference.data;
@@ -130,12 +131,13 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
   @override
   Future<Response<T>> get<R>(
     String id, {
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   }) async {
     final response = Response<T>();
     try {
       if (id.isNotEmpty) {
-        final url = _url(id, source);
+        final url = currentUrl(id, source);
         final reference = await database.get(url);
         final data = reference.data;
         if (reference.statusCode == 200 && data is Map) {
@@ -165,11 +167,12 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
   @override
   Future<Response<List<T>>> gets<R>({
     bool onlyUpdatedData = false,
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   }) async {
     final response = Response<List<T>>();
     try {
-      final url = _source(source);
+      final url = currentSource(source);
       final reference = await database.get(url);
       final data = reference.data;
       if (reference.statusCode == 200 && data is List<dynamic>) {
@@ -196,6 +199,7 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
 
   @override
   Future<Response<List<T>>> getUpdates<R>({
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   }) {
     return gets(
@@ -207,13 +211,14 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
   @override
   Stream<Response<T>> live<R>(
     String id, {
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   }) {
     final controller = StreamController<Response<T>>();
     final response = Response<T>();
     try {
       if (id.isNotEmpty) {
-        final url = _url(id, source);
+        final url = currentUrl(id, source);
         Timer.periodic(const Duration(milliseconds: 3000), (timer) async {
           final reference = await database.get(url);
           final data = reference.data;
@@ -253,12 +258,13 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
   @override
   Stream<Response<List<T>>> lives<R>({
     bool onlyUpdatedData = false,
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   }) {
     final controller = StreamController<Response<List<T>>>();
     final response = Response<List<T>>();
     try {
-      final url = _source(source);
+      final url = currentSource(source);
       Timer.periodic(const Duration(milliseconds: 3000), (timer) async {
         final reference = await database.get(url);
         final data = reference.data;

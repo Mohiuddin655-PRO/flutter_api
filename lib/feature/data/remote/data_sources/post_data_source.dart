@@ -1,13 +1,15 @@
-import '../../../../contents.dart';
-import '../../../../core/common/data_sources/api_data_source.dart';
+import 'package:flutter_api/core/common/data_sources/encrypt_api_data_source.dart';
+
 import '../../../domain/entities/post.dart';
 
-class PostDataSource extends ApiDataSource<Post> {
+class PostDataSource extends EncryptApiDataSource<Post> {
   PostDataSource({
-    super.api = ApiPaths.api,
-    super.path = ApiPaths.posts,
+    required super.service,
+    super.path = "allInstructors",
   });
 
   @override
-  Post build(source) => Post.from(source);
+  Post build(source) {
+    return Post.from(source);
+  }
 }

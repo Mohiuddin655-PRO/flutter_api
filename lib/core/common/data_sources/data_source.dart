@@ -16,28 +16,34 @@ abstract class DataSource<T> {
 
   Future<Response<T>> get<R>(
     String id, {
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   });
 
   Future<Response<List<T>>> gets<R>({
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   });
 
   Stream<Response<T>> live<R>(
     String id, {
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   });
 
   Stream<Response<List<T>>> lives<R>({
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   });
 
   Future<Response<List<T>>> getUpdates<R>({
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   });
 
   Future<Response> delete<R>(
     String id, {
+    Map<String, dynamic>? extra,
     R? Function(R parent)? source,
   });
 
