@@ -1,4 +1,4 @@
-import '../feature/data/local/contents/languages.dart';
+import '../../../feature/data/local/contents/languages.dart';
 
 class RegionalTextProvider<T> {
   final T content;
