@@ -9,7 +9,7 @@ class LogBuilder {
   String _lineBreak = '\n';
 
   LogBuilder(this._tag) {
-    _builder = "$_tag\n {$_lineBreak";
+    _builder = "{$_lineBreak";
   }
 
   static LogBuilder getInstance(String tag) {
@@ -43,7 +43,7 @@ class LogBuilder {
       _builder = "$_builder"
           "$_startingSign"
           "$name"
-          "$_puttingSeparator"
+          "\t$_puttingSeparator"
           "$value"
           "$_lineBreak";
     }
@@ -55,7 +55,7 @@ class LogBuilder {
       _builder = "$_builder"
           "$_startingSign"
           "$name"
-          "$_puttingSeparator";
+          "\t$_puttingSeparator";
       if (data.length > 3) {
         _builder = "$_builder[ "
             "${data[0]}, "

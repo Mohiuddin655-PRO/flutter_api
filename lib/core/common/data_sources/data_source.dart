@@ -9,24 +9,24 @@ abstract class DataSource<T> {
   });
 
   Future<Response> update<R>(
-      String id,
-      Map<String, dynamic> data, {
-        R? Function(R parent)? source,
-      });
+    String id,
+    Map<String, dynamic> data, {
+    R? Function(R parent)? source,
+  });
 
   Future<Response<T>> get<R>(
-      String id, {
-        R? Function(R parent)? source,
-      });
+    String id, {
+    R? Function(R parent)? source,
+  });
 
   Future<Response<List<T>>> gets<R>({
     R? Function(R parent)? source,
   });
 
   Stream<Response<T>> live<R>(
-      String id, {
-        R? Function(R parent)? source,
-      });
+    String id, {
+    R? Function(R parent)? source,
+  });
 
   Stream<Response<List<T>>> lives<R>({
     R? Function(R parent)? source,
@@ -37,11 +37,11 @@ abstract class DataSource<T> {
   });
 
   Future<Response> delete<R>(
-      String id, {
-        R? Function(R parent)? source,
-      });
+    String id, {
+    R? Function(R parent)? source,
+  });
 
   T build(dynamic source);
 
-  LogBuilder get log => LogBuilder("firebase_data_source");
+  LogBuilder get log => LogBuilder("Source");
 }

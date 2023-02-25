@@ -48,16 +48,16 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
       final reference = await database.post(url, data: data);
       if (reference.statusCode == 200 || reference.statusCode == 201) {
         final result = reference.data;
-        log.put("INSERT", "$url : $result");
+        log.put("Type", "INSERT").put("URL", url).put("RESULT", result).build();
         return response.copyWith(result: result);
       } else {
         final error = "Data unmodified [${reference.statusCode}]";
-        log.put("INSERT", "$url : $error");
+        log.put("Type", "INSERT").put("URL", url).put("ERROR", error).build();
         return response.copyWith(snapshot: reference, message: error);
       }
     } else {
       final error = "Undefined data $data";
-      log.put("INSERT", error);
+      log.put("Type", "INSERT").put("ERROR", error).build();
       return response.copyWith(message: error);
     }
   }
@@ -75,20 +75,20 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
         final reference = await database.put(url, data: data);
         if (reference.statusCode == 200 || reference.statusCode == 201) {
           final result = reference.data;
-          log.put("UPDATE", "$url : $result");
+          log.put("Type", "GET").put("URL", url).put("RESULT", result).build();
           return response.copyWith(result: result);
         } else {
           final error = "Data unmodified [${reference.statusCode}]";
-          log.put("UPDATE", "$url : $error");
+          log.put("Type", "UPDATE").put("URL", url).put("ERROR", error).build();
           return response.copyWith(snapshot: reference, message: error);
         }
       } else {
         final error = "Undefined data $data";
-        log.put("UPDATE", error);
+        log.put("Type", "UPDATE").put("ERROR", error).build();
         return response.copyWith(message: error);
       }
     } catch (_) {
-      log.put("UPDATE", _.toString());
+      log.put("Type", "UPDATE").put("ERROR", _).build();
       return response.copyWith(message: _.toString());
     }
   }
@@ -105,20 +105,24 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
         final reference = await database.delete(url);
         if (reference.statusCode == 200 || reference.statusCode == 201) {
           final result = reference.data;
-          log.put("DELETE", "$url : $result");
+          log
+              .put("Type", "DELETE")
+              .put("URL", url)
+              .put("RESULT", result)
+              .build();
           return response.copyWith(result: result);
         } else {
           final error = "Data unmodified [${reference.statusCode}]";
-          log.put("DELETE", "$url : $error");
+          log.put("Type", "DELETE").put("URL", url).put("ERROR", error).build();
           return response.copyWith(snapshot: reference, message: error);
         }
       } else {
         final error = "Undefined ID [$id]";
-        log.put("DELETE", error);
+        log.put("Type", "DELETE").put("ERROR", error).build();
         return response.copyWith(message: error);
       }
     } catch (_) {
-      log.put("DELETE", _.toString());
+      log.put("Type", "DELETE").put("ERROR", _).build();
       return response.copyWith(message: _.toString());
     }
   }
@@ -136,20 +140,24 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
         final data = reference.data;
         if (reference.statusCode == 200 && data is Map) {
           final result = build(data);
-          log.put("GET", "$url : $result");
+          log
+              .put("Type", "GET")
+              .put("URL", url)
+              .put("RESULT", result.runtimeType)
+              .build();
           return response.copyWith(result: result);
         } else {
           final error = "Data unmodified [${reference.statusCode}]";
-          log.put("GET", "$url : $error");
+          log.put("Type", "GET").put("URL", url).put("ERROR", error).build();
           return response.copyWith(snapshot: reference, message: error);
         }
       } else {
         final error = "Undefined ID [$id]";
-        log.put("GET", error);
+        log.put("Type", "GET").put("ERROR", error).build();
         return response.copyWith(message: error);
       }
     } catch (_) {
-      log.put("GET", _.toString());
+      log.put("Type", "GET").put("ERROR", _).build();
       return response.copyWith(message: _.toString());
     }
   }
@@ -168,15 +176,20 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
         List<T> result = data.map((item) {
           return build(item);
         }).toList();
-        log.put("GETS", "$url : $result");
+        log
+            .put("Type", "GETS")
+            .put("URL", url)
+            .put("SIZE", result.length)
+            .put("RESULT", result.map((e) => e.runtimeType).toList())
+            .build();
         return response.copyWith(result: result);
       } else {
         final error = "Data unmodified [${reference.statusCode}]";
-        log.put("GETS", "$url : $error");
+        log.put("TYPE", "GETS").put("URL", url).put("ERROR", error).build();
         return response.copyWith(snapshot: reference, message: error);
       }
     } catch (_) {
-      log.put("GETS", _.toString());
+      log.put("TYPE", "GETS").put("ERROR", _).build();
       return response.copyWith(message: _.toString());
     }
   }
@@ -207,12 +220,17 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
           if (reference.statusCode == 200 && data is Map) {
             final result = build(data);
             log.put("LIVE", "$url : $result");
+            log
+                .put("TYPE", "LIVE")
+                .put("URL", url)
+                .put("RESULT", result.runtimeType)
+                .build();
             controller.add(
               response.copyWith(result: result),
             );
           } else {
             final error = "Data unmodified [${reference.statusCode}]";
-            log.put("LIVE", "$url : $error");
+            log.put("TYPE", "LIVE").put("URL", url).put("ERROR", error).build();
             controller.addError(
               response.copyWith(snapshot: reference, message: error),
             );
@@ -220,13 +238,13 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
         });
       } else {
         final error = "Undefined ID [$id]";
-        log.put("LIVE", error);
+        log.put("TYPE", "LIVE").put("ERROR", error).build();
         controller.addError(
           response.copyWith(message: error),
         );
       }
     } catch (_) {
-      log.put("LIVE", _.toString());
+      log.put("TYPE", "LIVE").put("ERROR", _).build();
       controller.addError(_);
     }
     return controller.stream;
@@ -248,20 +266,25 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
           List<T> result = data.map((item) {
             return build(item);
           }).toList();
-          log.put("LIVES", "$url : $result");
+          log
+              .put("TYPE", "LIVES")
+              .put("URL", url)
+              .put("SIZE", result.length)
+              .put("RESULT", result.map((e) => e.runtimeType).toList())
+              .build();
           controller.add(
             response.copyWith(result: result),
           );
         } else {
           final error = "Data unmodified [${reference.statusCode}]";
-          log.put("LIVES", "$url : $error");
+          log.put("TYPE", "LIVES").put("ERROR", error).build();
           controller.addError(
             response.copyWith(snapshot: reference, message: error),
           );
         }
       });
     } catch (_) {
-      log.put("LIVES", _.toString());
+      log.put("TYPE", "LIVES").put("ERROR", _).build();
       controller.addError(_);
     }
 
