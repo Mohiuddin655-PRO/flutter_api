@@ -1,6 +1,3 @@
-
-import 'dart:math';
-
 class AuthHelper {
   static bool isCurrentUid(String id) => uid == id;
 

@@ -219,12 +219,10 @@ class _Input extends StatelessWidget {
 }
 
 class _SendButton extends StatelessWidget {
-  final bool enabled;
   final Function()? onClick;
 
   const _SendButton({
     Key? key,
-    this.enabled = true,
     this.onClick,
   }) : super(key: key);
 
@@ -238,7 +236,6 @@ class _SendButton extends StatelessWidget {
         color: theme.primaryColor,
         borderRadius: BorderRadius.circular(50),
         child: InkWell(
-          onTap: enabled ? onClick : null,
           child: Container(
             padding: const EdgeInsets.all(10),
             child: const Icon(

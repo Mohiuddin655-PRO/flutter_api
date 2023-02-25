@@ -74,7 +74,6 @@ Widget _profile() {
 
 Widget _search(dynamic arguments) {
   final data = arguments is Map<String, dynamic> ? arguments : null;
-  final user = data?["user"];
   final userCubit = data?["user_cubit"];
   return MultiBlocProvider(
     providers: [

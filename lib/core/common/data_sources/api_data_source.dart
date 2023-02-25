@@ -47,13 +47,18 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
           id != null && id.isNotEmpty ? _url(id, source) : _source(source);
       final reference = await database.post(url, data: data);
       if (reference.statusCode == 200 || reference.statusCode == 201) {
-        return response.copyWith(result: reference.data);
+        final result = reference.data;
+        log.put("INSERT", "$url : $result");
+        return response.copyWith(result: result);
       } else {
-        return response.copyWith(
-            snapshot: reference, message: "Data unmodified!");
+        final error = "Data unmodified [${reference.statusCode}]";
+        log.put("INSERT", "$url : $error");
+        return response.copyWith(snapshot: reference, message: error);
       }
     } else {
-      return response.copyWith(message: "Id isn't valid!");
+      final error = "Undefined data $data";
+      log.put("INSERT", error);
+      return response.copyWith(message: error);
     }
   }
 
@@ -66,19 +71,21 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
     const response = Response();
     try {
       if (data.isNotEmpty) {
-        final reference = await database.put(_url(id, source), data: data);
+        final url = _url(id, source);
+        final reference = await database.put(url, data: data);
         if (reference.statusCode == 200 || reference.statusCode == 201) {
-          return response.copyWith(result: reference.data);
+          final result = reference.data;
+          log.put("UPDATE", "$url : $result");
+          return response.copyWith(result: result);
         } else {
-          return response.copyWith(
-            snapshot: reference,
-            message: "Data unmodified!",
-          );
+          final error = "Data unmodified [${reference.statusCode}]";
+          log.put("UPDATE", "$url : $error");
+          return response.copyWith(snapshot: reference, message: error);
         }
       } else {
-        return response.copyWith(
-          message: "Id isn't valid!",
-        );
+        final error = "Undefined data $data";
+        log.put("UPDATE", error);
+        return response.copyWith(message: error);
       }
     } catch (_) {
       log.put("UPDATE", _.toString());
@@ -94,19 +101,21 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
     const response = Response();
     try {
       if (id.isNotEmpty) {
-        final reference = await database.delete(_url(id, source));
+        final url = _url(id, source);
+        final reference = await database.delete(url);
         if (reference.statusCode == 200 || reference.statusCode == 201) {
-          return response.copyWith(result: reference.data);
+          final result = reference.data;
+          log.put("DELETE", "$url : $result");
+          return response.copyWith(result: result);
         } else {
-          return response.copyWith(
-            snapshot: reference,
-            message: "Data unmodified!",
-          );
+          final error = "Data unmodified [${reference.statusCode}]";
+          log.put("DELETE", "$url : $error");
+          return response.copyWith(snapshot: reference, message: error);
         }
       } else {
-        return response.copyWith(
-          message: "Id isn't valid!",
-        );
+        final error = "Undefined ID [$id]";
+        log.put("DELETE", error);
+        return response.copyWith(message: error);
       }
     } catch (_) {
       log.put("DELETE", _.toString());
@@ -122,20 +131,22 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
     final response = Response<T>();
     try {
       if (id.isNotEmpty) {
-        final reference = await database.get(_url(id, source));
+        final url = _url(id, source);
+        final reference = await database.get(url);
         final data = reference.data;
         if (reference.statusCode == 200 && data is Map) {
-          return response.copyWith(result: build(data));
+          final result = build(data);
+          log.put("GET", "$url : $result");
+          return response.copyWith(result: result);
         } else {
-          return response.copyWith(
-            snapshot: reference,
-            message: "Data unmodified!",
-          );
+          final error = "Data unmodified [${reference.statusCode}]";
+          log.put("GET", "$url : $error");
+          return response.copyWith(snapshot: reference, message: error);
         }
       } else {
-        return response.copyWith(
-          message: "Id isn't valid!",
-        );
+        final error = "Undefined ID [$id]";
+        log.put("GET", error);
+        return response.copyWith(message: error);
       }
     } catch (_) {
       log.put("GET", _.toString());
@@ -150,18 +161,19 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
   }) async {
     final response = Response<List<T>>();
     try {
-      final reference = await database.get(_source(source));
+      final url = _source(source);
+      final reference = await database.get(url);
       final data = reference.data;
       if (reference.statusCode == 200 && data is List<dynamic>) {
-        List<T> list = data.map((item) {
+        List<T> result = data.map((item) {
           return build(item);
         }).toList();
-        return response.copyWith(result: list);
+        log.put("GETS", "$url : $result");
+        return response.copyWith(result: result);
       } else {
-        return response.copyWith(
-          snapshot: reference,
-          message: "Data unmodified!",
-        );
+        final error = "Data unmodified [${reference.statusCode}]";
+        log.put("GETS", "$url : $error");
+        return response.copyWith(snapshot: reference, message: error);
       }
     } catch (_) {
       log.put("GETS", _.toString());
@@ -187,26 +199,34 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
     final controller = StreamController<Response<T>>();
     final response = Response<T>();
     try {
-      Timer.periodic(const Duration(milliseconds: 3000), (timer) async {
-        if (id.isNotEmpty) {
-          final reference = await database.get(_url(id, source));
+      if (id.isNotEmpty) {
+        final url = _url(id, source);
+        Timer.periodic(const Duration(milliseconds: 3000), (timer) async {
+          final reference = await database.get(url);
           final data = reference.data;
           if (reference.statusCode == 200 && data is Map) {
-            controller.add(response.copyWith(result: build(data)));
+            final result = build(data);
+            log.put("LIVE", "$url : $result");
+            controller.add(
+              response.copyWith(result: result),
+            );
           } else {
-            controller.addError(response.copyWith(
-              snapshot: reference,
-              message: "Data unmodified!",
-            ));
+            final error = "Data unmodified [${reference.statusCode}]";
+            log.put("LIVE", "$url : $error");
+            controller.addError(
+              response.copyWith(snapshot: reference, message: error),
+            );
           }
-        } else {
-          controller.addError(response.copyWith(
-            message: "Id isn't valid!",
-          ));
-        }
-      });
+        });
+      } else {
+        final error = "Undefined ID [$id]";
+        log.put("LIVE", error);
+        controller.addError(
+          response.copyWith(message: error),
+        );
+      }
     } catch (_) {
-      log.put("GET", _.toString());
+      log.put("LIVE", _.toString());
       controller.addError(_);
     }
     return controller.stream;
@@ -220,27 +240,28 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
     final controller = StreamController<Response<List<T>>>();
     final response = Response<List<T>>();
     try {
+      final url = _source(source);
       Timer.periodic(const Duration(milliseconds: 3000), (timer) async {
-        print("Lives [${_source(source)}]");
-        final reference = await database.get(_source(source));
-        print("Lives [${_source(source)}] : $reference");
+        final reference = await database.get(url);
         final data = reference.data;
-        print("Lives [${_source(source)}] : ${reference.statusCode}");
         if (reference.statusCode == 200 && data is List<dynamic>) {
-          print("Lives [${_source(source)}] : $data");
-          List<T> list = data.map((item) {
+          List<T> result = data.map((item) {
             return build(item);
           }).toList();
-          controller.add(response.copyWith(result: list));
+          log.put("LIVES", "$url : $result");
+          controller.add(
+            response.copyWith(result: result),
+          );
         } else {
-          controller.addError(response.copyWith(
-            snapshot: reference,
-            message: "Data unmodified!",
-          ));
+          final error = "Data unmodified [${reference.statusCode}]";
+          log.put("LIVES", "$url : $error");
+          controller.addError(
+            response.copyWith(snapshot: reference, message: error),
+          );
         }
       });
     } catch (_) {
-      log.put("GETS", _.toString());
+      log.put("LIVES", _.toString());
       controller.addError(_);
     }
 

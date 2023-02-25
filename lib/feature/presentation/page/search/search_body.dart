@@ -88,41 +88,36 @@ class _Users extends StatelessWidget {
 }
 
 class _User extends StatelessWidget {
-  final bool visible;
   final User item;
   final Function(User item)? onClick;
 
   const _User({
     Key? key,
     required this.item,
-    this.visible = true,
     this.onClick,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Visibility(
-      visible: visible,
-      child: ListTile(
-        onTap: () => onClick?.call(item),
-        title: TextView(
-          text: item.name ?? "",
-        ),
-        subtitle: TextView(
-          text: item.email ?? "",
-        ),
-        leading: CircleAvatar(
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            clipBehavior: Clip.antiAlias,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-            ),
-            child: Image.asset(
-              "assets/img/img_user.jpeg",
-              fit: BoxFit.cover,
-            ),
+    return ListTile(
+      onTap: () => onClick?.call(item),
+      title: TextView(
+        text: item.name ?? "",
+      ),
+      subtitle: TextView(
+        text: item.email ?? "",
+      ),
+      leading: CircleAvatar(
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          clipBehavior: Clip.antiAlias,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+          ),
+          child: Image.asset(
+            "assets/img/img_user.jpeg",
+            fit: BoxFit.cover,
           ),
         ),
       ),

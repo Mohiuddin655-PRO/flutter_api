@@ -22,7 +22,6 @@ class _BottomNavigationBodyState extends State<BottomNavigationBody> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final item = widget.items[0];
     return SizedBox(
       width: size.width,
       child: Column(
