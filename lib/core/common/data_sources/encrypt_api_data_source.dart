@@ -1,25 +1,27 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:core';
 
+import 'package:encrypt/encrypt.dart' as crypto;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_api/feature/domain/entities/entity.dart';
 
 import '../../../../core/common/responses/response.dart';
-import '../../utils/providers/api_service.dart';
 import 'api_data_source.dart';
 
 abstract class EncryptApiDataSource<T extends Entity> extends ApiDataSource<T> {
-  final ApiService service;
+  final EncryptedApi encryptor;
 
   EncryptApiDataSource({
     required super.path,
-    required this.service,
-  }) : super(api: service.api);
+    required this.encryptor,
+  }) : super(api: encryptor);
 
   Future<Map<String, dynamic>> input(Map<String, dynamic>? data) async =>
-      service.input(data ?? {});
+      encryptor.input(data ?? {});
 
   Future<Map<String, dynamic>> output(String data) async =>
-      service.output(data);
+      encryptor.output(data);
 
   @override
   Future<Response> insert<R>({
@@ -35,7 +37,8 @@ abstract class EncryptApiDataSource<T extends Entity> extends ApiDataSource<T> {
             ? currentUrl(id, source)
             : currentSource(source);
         final reference = await database.post(url, data: value);
-        if (reference.statusCode == 200 || reference.statusCode == 201) {
+        final code = reference.statusCode;
+        if (code == 200 || code == 201 || code == encryptor.status.created) {
           final result = reference.data;
           log
               .put("Type", "INSERT")
@@ -73,7 +76,8 @@ abstract class EncryptApiDataSource<T extends Entity> extends ApiDataSource<T> {
         if (value.isNotEmpty) {
           final url = currentUrl(id, source);
           final reference = await database.put(url, data: value);
-          if (reference.statusCode == 200 || reference.statusCode == 201) {
+          final code = reference.statusCode;
+          if (code == 200 || code == encryptor.status.updated) {
             final result = reference.data;
             log
                 .put("Type", "GET")
@@ -119,7 +123,8 @@ abstract class EncryptApiDataSource<T extends Entity> extends ApiDataSource<T> {
         if (value.isNotEmpty) {
           final url = currentUrl(id, source);
           final reference = await database.delete(url, data: value);
-          if (reference.statusCode == 200 || reference.statusCode == 201) {
+          final code = reference.statusCode;
+          if (code == 200 || code == encryptor.status.deleted) {
             final result = reference.data;
             log
                 .put("Type", "DELETE")
@@ -164,11 +169,13 @@ abstract class EncryptApiDataSource<T extends Entity> extends ApiDataSource<T> {
         final value = await input(extra);
         if (value.isNotEmpty) {
           final url = currentUrl(id, source);
-          final reference = service.type == RequestType.get
+          final reference = encryptor.type == ApiRequest.get
               ? await database.get(url, data: value)
               : await database.post(url, data: value);
           final data = reference.data;
-          if (reference.statusCode == 200 && data is Map) {
+          final code = reference.statusCode;
+          if ((code == 200 || code == encryptor.status.ok) &&
+              data is Map<String, dynamic>) {
             final result = build(data);
             log
                 .put("Type", "GET")
@@ -208,42 +215,45 @@ abstract class EncryptApiDataSource<T extends Entity> extends ApiDataSource<T> {
       final value = await input(extra);
       if (value.isNotEmpty) {
         final url = currentSource(source);
-        final reference = service.type == RequestType.get
+        final reference = encryptor.type == ApiRequest.get
             ? await database.get(url, data: value)
             : await database.post(url, data: value);
-        final encryptor = reference.data;
-        if (encryptor is Map) {
-          final second = await service.output(encryptor);
-          if (second is Map) {
-            final data = second[service.body];
-            if (reference.statusCode == 200 && data is List<dynamic>) {
-              List<T> result = data.map((item) {
+        final code = reference.statusCode;
+        if (code == 200 || code == encryptor.status.ok) {
+          final data = await encryptor.output(reference.data);
+          if (data is Map<String, dynamic> || data is List<dynamic>) {
+            List<T> result = [];
+            if (data is Map) {
+              result = [build(data)];
+            } else {
+              result = data.map((item) {
                 return build(item);
               }).toList();
-              log
-                  .put("Type", "GETS")
-                  .put("URL", url)
-                  .put("SIZE", result.length)
-                  .put("RESULT", result.map((e) => e.runtimeType).toList())
-                  .build();
-              return response.copyWith(result: result);
-            } else {
-              final error = "Data unmodified [${reference.statusCode}]";
-              log
-                  .put("TYPE", "GETS")
-                  .put("URL", url)
-                  .put("ERROR", error)
-                  .build();
-              return response.copyWith(snapshot: reference, message: error);
             }
+            log
+                .put("Type", "GETS")
+                .put("URL", url)
+                .put("SIZE", result.length)
+                .put("RESULT", result.map((e) => e.runtimeType).toList())
+                .build();
+            return response.copyWith(result: result);
           } else {
-            const error = "Unacceptable source!";
-            log.put("TYPE", "GETS").put("ERROR", error).build();
-            return response.copyWith(message: error);
+            const error = "Data unmodified!";
+            log
+                .put("Type", "GET")
+                .put("URL", url)
+                .put("ERROR", error)
+                .put("SOURCE", data.runtimeType)
+                .build();
+            return response.copyWith(snapshot: data, message: error);
           }
         } else {
-          const error = "Unacceptable encryptor!";
-          log.put("TYPE", "GETS").put("ERROR", error).build();
+          final error = "Unacceptable response [${reference.statusCode}]";
+          log
+              .put("TYPE", "GETS")
+              .put("ERROR", error)
+              .put("RESPONSE", reference.data)
+              .build();
           return response.copyWith(message: error);
         }
       } else {
@@ -283,11 +293,13 @@ abstract class EncryptApiDataSource<T extends Entity> extends ApiDataSource<T> {
         if (value.isNotEmpty) {
           final url = currentUrl(id, source);
           Timer.periodic(const Duration(milliseconds: 3000), (timer) async {
-            final reference = service.type == RequestType.get
+            final reference = encryptor.type == ApiRequest.get
                 ? await database.get(url, data: value)
                 : await database.post(url, data: value);
             final data = reference.data;
-            if (reference.statusCode == 200 && data is Map) {
+            final code = reference.statusCode;
+            if ((code == 200 || code == encryptor.status.ok) &&
+                data is Map<String, dynamic>) {
               final result = build(data);
               log.put("LIVE", "$url : $result");
               log
@@ -345,11 +357,13 @@ abstract class EncryptApiDataSource<T extends Entity> extends ApiDataSource<T> {
         if (value.isNotEmpty) {
           final url = currentSource(source);
           Timer.periodic(const Duration(milliseconds: 3000), (timer) async {
-            final reference = service.type == RequestType.get
+            final reference = encryptor.type == ApiRequest.get
                 ? await database.get(url, data: value)
                 : await database.post(url, data: value);
             final data = reference.data;
-            if (reference.statusCode == 200 && data is List<dynamic>) {
+            final code = reference.statusCode;
+            if ((code == 200 || code == encryptor.status.ok) &&
+                data is List<dynamic>) {
               List<T> result = data.map((item) {
                 return build(item);
               }).toList();
@@ -390,5 +404,54 @@ abstract class EncryptApiDataSource<T extends Entity> extends ApiDataSource<T> {
     }
 
     controller.stream;
+  }
+}
+
+class EncryptedApi extends Api {
+  final String key;
+  final String iv;
+  final String passcode;
+  final ApiRequest type;
+  final Map<String, dynamic> Function(
+    String request,
+    String passcode,
+  ) request;
+  final dynamic Function(Map<String, dynamic> data) response;
+
+  const EncryptedApi({
+    required super.api,
+    required this.key,
+    required this.iv,
+    required this.passcode,
+    required this.request,
+    required this.response,
+    this.type = ApiRequest.post,
+    super.status = const ApiStatus(),
+  });
+
+  crypto.Key get _key => crypto.Key.fromUtf8(key);
+
+  crypto.IV get _iv => crypto.IV.fromUtf8(iv);
+
+  crypto.Encrypter get _en {
+    return crypto.Encrypter(
+      crypto.AES(_key, mode: crypto.AESMode.cbc),
+    );
+  }
+
+  Future<Map<String, dynamic>> input(dynamic data) => compute(_encoder, data);
+
+  dynamic output(dynamic data) => compute(_decoder, data);
+
+  Future<Map<String, dynamic>> _encoder(dynamic data) async {
+    final encrypted = _en.encrypt(jsonEncode(data), iv: _iv);
+    return request.call(encrypted.base64, passcode);
+  }
+
+  Future<Map<String, dynamic>> _decoder(dynamic source) async {
+    final value = await response.call(source);
+    final encrypted = crypto.Encrypted.fromBase64(value);
+    final data = _en.decrypt(encrypted, iv: _iv);
+    return jsonDecode(data);
   }
 }

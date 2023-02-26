@@ -1,4 +1,3 @@
-import 'package:flutter_api/feature/components/api_secret.dart';
 import 'package:flutter_api/feature/data/remote/data_sources/comment_data_source.dart';
 import 'package:flutter_api/feature/data/remote/repository_impls/post_repository.dart';
 import 'package:flutter_api/feature/domain/use_cases/comment/delete_comment_use_case.dart';
@@ -49,7 +48,7 @@ void _repositories() {
   });
   locator.registerLazySingleton<DatabaseRepository<Post>>(() {
     return PostRepository(
-      remote: PostDataSource(service: service),
+      remote: PostDataSource(),
     );
   });
   locator.registerLazySingleton<DatabaseRepository<Comment>>(() {

@@ -8,12 +8,12 @@ import '../../../../core/common/responses/response.dart';
 import 'data_source.dart';
 
 abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
-  final String api;
+  final Api api;
   final String path;
 
   ApiDataSource({
-    required this.path,
     required this.api,
+    required this.path,
   });
 
   dio.Dio? _db;
@@ -23,7 +23,7 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
   String currentSource<R>(
     R? Function(R parent)? source,
   ) {
-    final reference = "$api/$path";
+    final reference = "${api.api}/$path";
     dynamic current = source?.call(reference as R);
     if (current is String) {
       return current;
@@ -43,10 +43,12 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
   }) async {
     const response = Response();
     if (data.isNotEmpty) {
-      final url =
-          id != null && id.isNotEmpty ? currentUrl(id, source) : currentSource(source);
+      final url = id != null && id.isNotEmpty
+          ? currentUrl(id, source)
+          : currentSource(source);
       final reference = await database.post(url, data: data);
-      if (reference.statusCode == 200 || reference.statusCode == 201) {
+      final code = reference.statusCode;
+      if (code == 200 || code == 201 || code == api.status.created) {
         final result = reference.data;
         log.put("Type", "INSERT").put("URL", url).put("RESULT", result).build();
         return response.copyWith(result: result);
@@ -73,7 +75,8 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
       if (data.isNotEmpty) {
         final url = currentUrl(id, source);
         final reference = await database.put(url, data: data);
-        if (reference.statusCode == 200 || reference.statusCode == 201) {
+        final code = reference.statusCode;
+        if (code == 200 || code == 201 || code == api.status.updated) {
           final result = reference.data;
           log.put("Type", "GET").put("URL", url).put("RESULT", result).build();
           return response.copyWith(result: result);
@@ -104,7 +107,8 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
       if (id.isNotEmpty) {
         final url = currentUrl(id, source);
         final reference = await database.delete(url);
-        if (reference.statusCode == 200 || reference.statusCode == 201) {
+        final code = reference.statusCode;
+        if (code == 200 || code == 201 || code == api.status.deleted) {
           final result = reference.data;
           log
               .put("Type", "DELETE")
@@ -140,7 +144,8 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
         final url = currentUrl(id, source);
         final reference = await database.get(url);
         final data = reference.data;
-        if (reference.statusCode == 200 && data is Map) {
+        final code = reference.statusCode;
+        if ((code == 200 || code == api.status.ok) && data is Map) {
           final result = build(data);
           log
               .put("Type", "GET")
@@ -175,7 +180,8 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
       final url = currentSource(source);
       final reference = await database.get(url);
       final data = reference.data;
-      if (reference.statusCode == 200 && data is List<dynamic>) {
+      final code = reference.statusCode;
+      if ((code == 200 || code == api.status.ok) && data is List<dynamic>) {
         List<T> result = data.map((item) {
           return build(item);
         }).toList();
@@ -222,7 +228,8 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
         Timer.periodic(const Duration(milliseconds: 3000), (timer) async {
           final reference = await database.get(url);
           final data = reference.data;
-          if (reference.statusCode == 200 && data is Map) {
+          final code = reference.statusCode;
+          if ((code == 200 || code == api.status.ok) && data is Map) {
             final result = build(data);
             log.put("LIVE", "$url : $result");
             log
@@ -268,7 +275,8 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
       Timer.periodic(const Duration(milliseconds: 3000), (timer) async {
         final reference = await database.get(url);
         final data = reference.data;
-        if (reference.statusCode == 200 && data is List<dynamic>) {
+        final code = reference.statusCode;
+        if ((code == 200 || code == api.status.ok) && data is List<dynamic>) {
           List<T> result = data.map((item) {
             return build(item);
           }).toList();
@@ -297,3 +305,31 @@ abstract class ApiDataSource<T extends Entity> extends DataSource<T> {
     return controller.stream;
   }
 }
+
+class Api {
+  final String api;
+  final ApiStatus status;
+
+  const Api({
+    required this.api,
+    this.status = const ApiStatus(),
+  });
+}
+
+class ApiStatus {
+  final int ok;
+  final int canceled;
+  final int created;
+  final int updated;
+  final int deleted;
+
+  const ApiStatus({
+    this.ok = 200,
+    this.created = 201,
+    this.updated = 202,
+    this.deleted = 203,
+    this.canceled = 204,
+  });
+}
+
+enum ApiRequest { get, post }
